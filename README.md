@@ -1,61 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# AI Weather Chatbot – Laravel 12 (CLI)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+---
 
-## About Laravel
+## 1 · Quick-start
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Prerequisite   | Version |
+|----------------|---------|
+| **PHP**        | ≥ 8.2   |
+| SQLite/MySQL   | any     |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```bash
+git clone https://github.com/digiageltd/ai-weather-bot.git
+cd ai-weather-bot
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+composer install
 
-## Learning Laravel
+cp .env.example .env
+# ── edit .env ─────────────────────────────────────────────
+# PRISM_OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+# (optional) PRISM_OPENAI_MODEL=gpt-4o
+# ---------------------------------------------------------
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+php artisan weather:chat         # interactive CLI 🔮
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+php artisan weather:chat --user_id=1    # talk as user 1
 
-## Laravel Sponsors
+./vendor/bin/pest
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Optional:  
+Run as a different user (default is 1).
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## 2 · What ships in this MVP
 
-## Contributing
+- **Laravel 12**, CLI only.
+- **Prism PHP** (OpenAI function-calling: `get_weather(city)`, `ask_location()`).
+- **Open-Meteo API** for current weather (no key required).
+- **User memory**: Locations in `user_data` table, survives new sessions.
+- **Conversation memory**: Optional `Conversation` table, last 10 turns replayed.
+- **Streaming**: `streamUserMessage()` (see code).
+- **Unit tests**: Pest, all external calls mocked.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## 3 · Intentionally **not** implemented
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Omitted            | Reason                                           |
+|--------------------|--------------------------------------------------|
+| Web UI             | Spec called for CLI-only.                        |
+| IP geolocation     | Needs 3rd-party API; out-of-scope for MVP.       |
+| Docker & CI        | Repo kept focused and light for first iteration. |
+| Caching/rate-limit | Open-Meteo/OpenAI generous for demo.             |
+| Multi-LLM support  | Only OpenAI provider wired for now.              |
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 4 · What the next dev should build
 
-## License
+1. **Web interface** (Vue, Livewire, Inertia, Blade, etc.)
+2. **Caching layer** (Redis: cache same lat/lon requests).
+3. **Docker & CI/CD** (Dockerfile, GitHub Actions for lint/test/deploy).
+4. **Session store** (move `$waitingForLocation` to Redis or DB).
+5. **Conversation memory** (DB, token-aware trimming).
+6. **Robust geocoder** (fallback, fuzzy matching).
+7. **Multi-provider** (env `PRISM_PROVIDER=`, wire other LLMs).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 5 · Where to extend the code
+
+| Area                | File/Class                              |
+|---------------------|-----------------------------------------|
+| Chat/AI logic       | `app/Services/ChatService.php`          |
+| Weather API logic   | `app/Services/WeatherService.php`       |
+| Location handling   | `app/Services/LocationService.php`      |
+| User data model     | `app/Models/UserData.php`               |
+| CLI entrypoint      | `app/Console/Commands/WeatherChat.php`  |
+| Tests               | `tests/Helpers`, `tests/Unit`           |
+
+---
+
+## 6 · Design decisions & caveats
+
+- **Function-calling tools** for LLM, easy to extend.
+- **user_data** is flexible for any future attribute.
+- **In-memory** session state (`$waitingForLocation`) is CLI-only.
+- Only last 10 messages replayed (token limits).
+- **Open-Meteo**: free, current conditions only.
+- **All tests mock external calls** for speed/reliability.
+- **Streaming** is optional; non-streaming fallback is always available.
+
+---
